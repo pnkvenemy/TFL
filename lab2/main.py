@@ -1,35 +1,33 @@
 import os
 
-from parser import lexer, to_postfix  # Импорт функций парсера
-from tree import build_tree, print_tree  # Импорт функций для работы с деревом
-from ts import Automaton  # Импорт класса Automaton
+from parser import lexer, to_postfix
+from tree import construct_expression_tree
+from ts import StateMachine
 
 def read_input_file(filename):
     with open(filename, 'r') as file:
         return file.read().strip()
 
-# Функция для записи данных в файл
-# Функция для проверки существования директории и её создания при отсутствии
 def ensure_directory_exists(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-# Проверяем и создаем папку 'test_results', если она не существует
 ensure_directory_exists('test_results')
 
 def write_output_file(filename, data):
     with open(filename, 'w', encoding='utf-8') as file:
         file.write(data)
+
 def process_data(data):
     lexemes = lexer(data)
     postfix = to_postfix(lexemes)
-    tree = build_tree(postfix)
+    expression_tree = construct_expression_tree(postfix)
 
-    automaton = Automaton([0], [[]], [False])
-    automaton.convert_tree_to_automaton(tree)
-    automaton.delete_traps()
+    state_machine = StateMachine([0], [[]], [False])
+    state_machine.convert_tree_to_state_machine(expression_tree)
+    state_machine.remove_dead_ends()
 
-    return automaton.automaton_to_regex()
+    return state_machine.convert_to_regex()
 
 def run_tests():
     test_files = os.listdir('tests')
@@ -43,9 +41,9 @@ def main():
     input_data = read_input_file('input.txt')
     if input_data:
         processed_data = process_data(input_data)
-        print(processed_data)  # Вывод в стандартный поток вывода
+        print(processed_data)
     else:
-        run_tests()  # Запуск автоматических тестов, если input.txt пуст
+        run_tests()
 
 if __name__ == "__main__":
     main()

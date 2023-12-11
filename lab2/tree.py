@@ -1,63 +1,48 @@
-class TreeNode:
-    def __init__(self, data, left=None, right=None):
-        self.data = data
-        self.left = left
-        self.right = right
+class ExprNode:
+    def __init__(self, value, left_node=None, right_node=None):
+        self.value = value
+        self.left_node = left_node
+        self.right_node = right_node
 
-def build_tree(lexemes):
-    stack = []
-    for lexeme in lexemes:
-        if lexeme[1] != "TERM":
-            node = TreeNode(lexeme)
-            if lexeme[1] == "UNARY":
-                node.left = stack.pop()
-            else:
-                node.right = stack.pop()
-                node.left = stack.pop()
-            stack.append(node)
+    def preorder_traversal(self):
+        nodes = [self]
+        while nodes:
+            node = nodes.pop()
+            yield node
+            if node.right_node:
+                nodes.append(node.right_node)
+            if node.left_node:
+                nodes.append(node.left_node)
+
+    def inorder_traversal(self):
+        node = self
+        stack = []
+        while stack or node:
+            while node:
+                stack.append(node)
+                node = node.left_node
+            node = stack.pop()
+            yield node
+            node = node.right_node
+
+    def __str__(self):
+        def recurse(node, level):
+            output = ""
+            if node:
+                output += recurse(node.right_node, level + 1)
+                output += "|   " * level
+                output += str(node.value) + "\n"
+                output += recurse(node.left_node, level + 1)
+            return output
+        return recurse(self, 0)
+
+def construct_expression_tree(token_list):
+    node_stack = []
+    for token in token_list:
+        if token[1] == "TERM" or token[1] == "START-LINE" or token[1] == "END-LINE":
+            node_stack.append(ExprNode(token))
         else:
-            stack.append(TreeNode(lexeme))
-    return stack[-1] if stack else None
-
-def analyze_tree(node, context=None):
-    if node is None:
-        return True
-
-    if context is None:
-        context = {'has_iteration': False, 'depth': 0}
-
-    if node.data[1] == "UNARY":
-        context['has_iteration'] = True
-        return analyze_tree(node.left, context)
-
-    if node.data[1] in ["BINARY", "CONCAT"]:
-        left_analysis = analyze_tree(node.left, context)
-        right_analysis = analyze_tree(node.right, context)
-        return left_analysis and right_analysis
-
-    context['depth'] += 1
-    return node.data[1] == "TERM"
-
-def extract_prefix_suffix(node, is_prefix=True):
-    if node is None:
-        return ""
-
-    if node.data[1] == "TERM":
-        return node.data[0] if is_prefix else ""
-
-    if node.data[1] == "UNARY":
-        return extract_prefix_suffix(node.left, is_prefix)
-
-    if node.data[1] in ["BINARY", "CONCAT"]:
-        left_part = extract_prefix_suffix(node.left, is_prefix)
-        right_part = extract_prefix_suffix(node.right, is_prefix)
-        return left_part + right_part if is_prefix else right_part
-
-    return ""
-
-def print_tree(node, indent="", position="root"):
-    if node is not None:
-        print(indent + position + ": " + str(node.data))
-        indent += "    "
-        print_tree(node.left, indent, "L")
-        print_tree(node.right, indent, "R")
+            right_node = node_stack.pop() if node_stack else None
+            left_node = node_stack.pop() if node_stack else None
+            node_stack.append(ExprNode(token, left_node, right_node))
+    return node_stack.pop() if node_stack else None
