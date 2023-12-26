@@ -3,7 +3,9 @@ from utils import read_test_cases, write_output
 import os
 
 if __name__ == "__main__":
-    slr_parser = SLRParser()
+    grammar_file_path = "grammar.txt"
+    slr_parser = SLRParser(grammar_file_path)
+    
     input_file_path = "input"
     output_file_path = "output"
     tests_folder = "tests"
