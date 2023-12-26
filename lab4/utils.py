@@ -4,7 +4,6 @@ def read_from_file( file_path):
             return file.read()
         
 def map_token(self, token):
-        # замена спец символов на соответствующие токены
         if token == ' ':
             return '_'
         elif token == '\n':
