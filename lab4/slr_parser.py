@@ -42,19 +42,15 @@ class SLRParser:
         self.priority_direction = priority_direction
     
     def perform_reduction(self, rule, state_stack, symbol_stack):
-        # сверткa на основе правила
         rule_non_terminal, rule_production = rule
         rule_len = len(rule_production)
 
-        # Удаление элементов
         for _ in range(rule_len):
             symbol_stack.pop()
             state_stack.pop()
 
-        # добавление нетерминала в стек символов
         symbol_stack.append(rule_non_terminal)
 
-        # обновление состояния на основе GOTO
         current_state = state_stack[-1]
         next_state = self.goto[current_state].get(rule_non_terminal)
         if next_state is not None:
@@ -71,12 +67,7 @@ class SLRParser:
         parse_steps = []
         panic_mode = False
         error_positions = []
-
-        # tokens = [(self.map_token(tok), line, pos)
-        #           for line, line_content in enumerate(tokens.split('\n'))
-        #           for pos, tok in enumerate(line_content.split())] + [('$', -1, -1)]
-    
-        
+            
         for token, line, pos in tokens:
             state = state_stack[-1]
             token, line, pos = tokens[0]
@@ -103,13 +94,11 @@ class SLRParser:
                 parse_steps.append("============ Успешный разбор ============")
                 break
 
-            # шаг сдвига
             if action.startswith('s'):
                 symbol_stack.append(token)
                 state_stack.append(int(action[1:]))
                 parse_steps.append(f"Test {test_number}: Сдвиг: Символ '{token}', Состояние {state_stack}")
                 tokens.pop(0)
-            # шаг свертки
             elif action.startswith('r'):
                 rule_number = int(action[1:]) - 1
                 rule = self.grammar_rules[rule_number]
@@ -127,10 +116,8 @@ class SLRParser:
             if action.startswith('r'):
                 rule_number = int(action[1:]) - 1
                 rule = self.grammar_rules[rule_number]
-
-                # определение приоритета/выбор правил для свертки
                 applicable_rules = self.determine_rule_priority([rule])
-                selected_rule = applicable_rules[0]  # выбор правил с наивысшим приоритетом
+                selected_rule = applicable_rules[0]
                 self.perform_reduction(selected_rule, state_stack, symbol_stack)
 
 
@@ -144,19 +131,16 @@ class SLRParser:
         return parse_steps
     
     def determine_rule_priority(self, rules):
-        # определение приоритета правил
         if self.priority_direction == 'from_senior_to_junior':
             return sorted(rules, key=lambda r: (-self.get_seniority_level(r[0]), -len(r[1])))
         else:
             return sorted(rules, key=lambda r: (self.get_seniority_level(r[0]), len(r[1])))
 
     def get_seniority_level(self, non_terminal):
-        # определение уровня старшинства нетерминала
         seniority = {'E': 2, 'T': 1, 'F': 0}
         return seniority.get(non_terminal, -1)
 
     def tokenize_input(self, input_string):
-        # преобразование входных данных в список токенов
         tokens = []
         for line, line_content in enumerate(input_string.split('\n')):
             for pos, tok in enumerate(line_content.split()):
