@@ -8,9 +8,6 @@ import re
 import random
 
 class FuzzTester:
-    """
-    Фазз-тестирование для проверки регулярных выражений.
-    """
 
     def __init__(self, iterations=100, pattern_length=5):
         self.iterations = iterations
@@ -36,9 +33,6 @@ class FuzzTester:
 
     @staticmethod
     def test_with_python(regex, test_string):
-        """
-        Тестируем с помощью встроенного в Python модуля re.
-        """
         try:
             return bool(re.match(regex, test_string))
         except re.error:
