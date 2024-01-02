@@ -58,7 +58,6 @@ class StateMachine:
         while queue:
             current = queue.pop(0)
             for symbol in self.alphabet:
-                # Получаем все возможные следующие состояния для текущего состояния и символа
                 next_states = frozenset(
                     state for current_state in current
                     for state in self.transitions.get((current_state, symbol), set())
@@ -73,7 +72,6 @@ class StateMachine:
                 if any(state in self.end_states for state in next_states):
                     dfa_final_states.add(next_states)
     
-        # Обновление состояний и переходов ДКА
         self.states = dfa_states
         self.transitions = dfa_transitions
         self.final_states = dfa_final_states
@@ -116,7 +114,7 @@ class StateMachine:
 
         self.transitions = [row for idx, row in enumerate(self.transitions) if accessible[idx]]
         self.initial_states = [state for idx, state in enumerate(self.initial_states) if accessible[idx]]
-        self.end_states = [state for idx, state in enumerate(self.end_states) if accessible[idx]]  # Используем end_states
+        self.end_states = [state for idx, state in enumerate(self.end_states) if accessible[idx]]
 
     def ensure_transitions_size(self):
         num_states = len(self.transitions)
@@ -126,9 +124,6 @@ class StateMachine:
 
 
     def convert_to_regex(self):
-        """
-        Преобразует НКА в регулярное выражение.
-        """
         self.ensure_transitions_size()
 
         num_states = len(self.transitions)
@@ -141,11 +136,9 @@ class StateMachine:
                 if i == j:
                     regex_matrix[i][j] = "ε"
 
-        # Добавление финальных состояний
         for i in range(num_states):
             regex_matrix[i][num_states] = "" if i not in self.end_states else "ε"
 
-        # Применяем алгоритм преобразования для каждого состояния
         for k in range(num_states):
             for i in range(num_states + 1):
                 for j in range(num_states + 1):
@@ -160,13 +153,11 @@ class StateMachine:
                         )
                     )
 
-        # Финальное регулярное выражение получаем из начального состояния
         final_regex = regex_matrix[0][num_states]
         return self.simplify_regex(final_regex) if final_regex else "ε"
 
     @staticmethod
     def concat_regex(r1, r2):
-        # Упрощаем конкатенацию с учётом ε
         if r1 == "ε":
             return r2
         if r2 == "ε":
@@ -175,48 +166,37 @@ class StateMachine:
 
     @staticmethod
     def or_regex(r1, r2):
-        # Упрощаем альтернативу
         if not r1 or r1 == "ε":
             return r2
         if not r2 or r2 == "ε":
             return r1
-        if r1 == r2:  # Удаляем дубликаты
+        if r1 == r2:
             return r1
         return f"({r1}|{r2})"
 
     @staticmethod
     def star_regex(r):
-        # Упрощаем звёздочку Клини
         if not r or r == "ε" or r.endswith("*"):
             return r
         return f"({r})*"
 
     def simplify_regex(self, regex):
-        """
-        Упрощает регулярное выражение.
-        """
-        # Удаляем избыточные скобки и ε
         simplified = regex.replace("(ε)", "")
         simplified = re.sub(r'\(([^|()]+)\)', r'\1', simplified)
         simplified = re.sub(r'\|\|+', '|', simplified) 
         simplified = re.sub(r'\*+', '*', simplified) 
 
-        # Удаление пустых альтернатив
         simplified = simplified.replace("ε|", "")
         simplified = simplified.replace("|ε", "")
         simplified = simplified.replace("ε", "") 
 
-        # Упрощение выражений типа (a|b)*|a в (a|b)*
         pattern = re.compile(r'\(([^)]+)\)\*\|(\1)')
         while pattern.search(simplified):
             simplified = pattern.sub(r'(\1)*', simplified)
-
-        # Упрощение выражений типа a|(a|b) в a|b
         pattern = re.compile(r'([^|()]+)\|\(\1\|([^)]+)\)')
         while pattern.search(simplified):
             simplified = pattern.sub(r'\1|\2', simplified)
 
-        # Упрощение выражений типа (a|b)|(c|d) в a|b|c|d
         pattern = re.compile(r'\(([^)]+)\)\|\(([^)]+)\)')
         while pattern.search(simplified):
             simplified = pattern.sub(r'(\1|\2)', simplified)
@@ -260,7 +240,6 @@ class StateMachine:
             if node.left_node is None:
                 raise ValueError(f"Unary operator '{node.value[0]}' without an argument")
 
-            # Обработка унарного оператора
             unary_state = self.convert_tree_to_state_machine(node.left_node, current_state)
             if node.value[0] == "*":
                 self.transitions[unary_state][current_state] = "ε"
