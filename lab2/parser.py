@@ -4,7 +4,7 @@ INTERSECT_OP = '∩'
 def lexer(regex):
     lexemes = []
     balance = 0
-    escaped = False  # Для обработки экранированных символов
+    escaped = False
 
     for char in regex:
         if escaped:
@@ -38,7 +38,6 @@ def to_postfix(lexemes):
     output = []
     stack = []
 
-    # Определение приоритета операторов
     priority = {'|': 1, '·': 2, '*': 3, '+': 3, '?': 3}
 
     for lexeme in lexemes:
@@ -49,7 +48,7 @@ def to_postfix(lexemes):
         elif lexeme[0] == ')':
             while stack and stack[-1][0] != '(':
                 output.append(stack.pop())
-            stack.pop()  # Удаляем '(' из стека
+            stack.pop()
         else:
             while stack and priority.get(lexeme[0], 0) <= priority.get(stack[-1][0], 0):
                 output.append(stack.pop())
@@ -70,9 +69,7 @@ def replace_lookbehind(lexemes, pos):
         start_line_flag = True
     lexemes.pop(pos)
     if start_line_flag:
-        lexemes.pop(pos)  # Удаление символа ^
-
-    # Находим соответствующую закрывающую скобку и добавляем правую скобку
+        lexemes.pop(pos)
     for i in range(pos, len(lexemes)):
         if lexemes[i][0] == "(":
             balance += 1
@@ -82,7 +79,6 @@ def replace_lookbehind(lexemes, pos):
                 lexemes.insert(i + 1, (")", "BRACKET"))
                 break
 
-    # Обработка оставшейся части выражения после lookbehind
     lexemes.insert(pos, (INTERSECT_OP, "INTERSECT"))
     if not start_line_flag:
         lexemes.insert(pos + 1, (".", "DOT"))
@@ -94,10 +90,9 @@ def replace_lookbehind(lexemes, pos):
 def replace_lookahead(lexemes, pos):
     balance = 1
     end_line_flag = False
-    lexemes.insert(pos, ("(", "BRACKET"))  # Добавляем открывающую скобку перед lookahead
-    lexemes.pop(pos + 1)  # Удаляем символ lookahead
+    lexemes.insert(pos, ("(", "BRACKET"))
+    lexemes.pop(pos + 1)
 
-    # Находим соответствующую закрывающую скобку и добавляем правую скобку
     for i in range(pos + 1, len(lexemes)):
         if lexemes[i][0] == "(":
             balance += 1
@@ -107,7 +102,7 @@ def replace_lookahead(lexemes, pos):
                 if lexemes[i - 1][1] == "END-LINE":
                     end_line_flag = True
                     lexemes.pop(i - 1)
-                lexemes.pop(i)  # Удаляем закрывающую скобку lookahead
+                lexemes.pop(i)
                 break
 
     if not end_line_flag:
@@ -121,13 +116,13 @@ def replace_lookahead(lexemes, pos):
 # Пример использования
 regex = "abc(?=def)"
 lexemes = lexer(regex)
-lexemes = replace_lookahead(lexemes, 2)  # Предполагаем, что lookahead находится в позиции 2
+lexemes = replace_lookahead(lexemes, 2)
 print("Lexemes with lookahead:", lexemes)
 
 # Пример использования
 regex = "(?<=abc)def"
 lexemes = lexer(regex)
-lexemes = replace_lookbehind(lexemes, 0)  # Предполагаем, что lookbehind находится в позиции 0
+lexemes = replace_lookbehind(lexemes, 0)
 print("Lexemes with lookbehind:", lexemes)
 
 # Пример использования
