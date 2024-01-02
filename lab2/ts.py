@@ -1,3 +1,5 @@
+import re
+
 class StateMachine:
     def __init__(self, initial_states, transitions, end_states):
         self.initial_states = initial_states
@@ -5,8 +7,7 @@ class StateMachine:
         self.end_states = end_states
 
     def minimize_states(self):
-      
-        dfa = self.convert_to_dfa()      
+        dfa = self.convert_to_dfa()
         groups = dfa.initial_grouping()
 
         while True:
@@ -16,24 +17,8 @@ class StateMachine:
             groups = new_groups
 
         minimized_dfa = dfa.create_minimized_dfa(groups)
+
         self.update_to_minimized(minimized_dfa)
-
-    def convert_to_dfa(self):
-        dfa_states = {frozenset([self.initial_state])}
-        dfa_transitions = {}
-        dfa_final_states = set()
-
-        queue = [frozenset([self.initial_state])]
-        while queue:
-            current = queue.pop(0)
-            for symbol in self.alphabet:
-                next_states = frozenset({s for state in current for s in self.transitions.get((state, symbol), set())})
-                dfa_transitions[(current, symbol)] = next_states
-                if next_states not in dfa_states:
-                    dfa_states.add(next_states)
-                    queue.append(next_states)
-                if not dfa_final_states.intersection(next_states) and next_states.intersection(self.final_states):
-                    dfa_final_states.add(next_states)
 
     def initial_grouping(self):
         final_states = {state for state in self.states if state in self.final_states}
@@ -62,6 +47,37 @@ class StateMachine:
                 next_state = self.transitions.get((representative, symbol))
                 if next_state:
                     new_transitions[(frozenset(group), symbol)] = frozenset(next_state)
+
+    def convert_to_dfa(self):
+        initial_state = frozenset(self.initial_states)
+        dfa_states = {initial_state}
+        dfa_transitions = {}
+        dfa_final_states = set()
+    
+        queue = [initial_state]
+        while queue:
+            current = queue.pop(0)
+            for symbol in self.alphabet:
+                # Получаем все возможные следующие состояния для текущего состояния и символа
+                next_states = frozenset(
+                    state for current_state in current
+                    for state in self.transitions.get((current_state, symbol), set())
+                )
+    
+                dfa_transitions[(current, symbol)] = next_states
+    
+                if next_states not in dfa_states:
+                    dfa_states.add(next_states)
+                    queue.append(next_states)
+    
+                if any(state in self.end_states for state in next_states):
+                    dfa_final_states.add(next_states)
+    
+        # Обновление состояний и переходов ДКА
+        self.states = dfa_states
+        self.transitions = dfa_transitions
+        self.final_states = dfa_final_states
+        self.initial_states = [initial_state]
 
     def update_to_minimized(self, minimized_dfa):
         self.states = minimized_dfa.states
@@ -100,37 +116,57 @@ class StateMachine:
 
         self.transitions = [row for idx, row in enumerate(self.transitions) if accessible[idx]]
         self.initial_states = [state for idx, state in enumerate(self.initial_states) if accessible[idx]]
-        self.end_states = [state for idx, state in enumerate(self.end_states) if accessible[idx]]  
+        self.end_states = [state for idx, state in enumerate(self.end_states) if accessible[idx]]  # Используем end_states
+
+    def ensure_transitions_size(self):
+        num_states = len(self.transitions)
+        for i in range(num_states):
+            if len(self.transitions[i]) < num_states:
+                self.transitions[i].extend(["0"] * (num_states - len(self.transitions[i])))
 
 
     def convert_to_regex(self):
-        states_count = len(self.transitions)
+        """
+        Преобразует НКА в регулярное выражение.
+        """
+        self.ensure_transitions_size()
 
-        regex_matrix = [["" for _ in range(states_count)] for _ in range(states_count)]
+        num_states = len(self.transitions)
+        regex_matrix = [[None for _ in range(num_states + 1)] for _ in range(num_states + 1)]
 
-        for i in range(states_count):
-            for j in range(states_count):
+        for i in range(num_states):
+            for j in range(num_states):
                 if self.transitions[i][j] != "0":
                     regex_matrix[i][j] = self.transitions[i][j]
                 if i == j:
-                    regex_matrix[i][j] += "ε"
+                    regex_matrix[i][j] = "ε"
 
-        for k in range(states_count):
-            for i in range(states_count):
-                for j in range(states_count):
+        # Добавление финальных состояний
+        for i in range(num_states):
+            regex_matrix[i][num_states] = "" if i not in self.end_states else "ε"
+
+        # Применяем алгоритм преобразования для каждого состояния
+        for k in range(num_states):
+            for i in range(num_states + 1):
+                for j in range(num_states + 1):
                     regex_matrix[i][j] = self.or_regex(
                         regex_matrix[i][j],
-                        self.concat_regex(regex_matrix[i][k], self.concat_regex(self.star_regex(regex_matrix[k][k]), regex_matrix[k][j]))
+                        self.concat_regex(
+                            regex_matrix[i][k],
+                            self.concat_regex(
+                                self.star_regex(regex_matrix[k][k]),
+                                regex_matrix[k][j]
+                            )
+                        )
                     )
 
-        final_regex = ""
-        for end_state in self.end_states: 
-            final_regex = self.or_regex(final_regex, regex_matrix[0][end_state])
-
-        return final_regex if final_regex else "ε"
+        # Финальное регулярное выражение получаем из начального состояния
+        final_regex = regex_matrix[0][num_states]
+        return self.simplify_regex(final_regex) if final_regex else "ε"
 
     @staticmethod
     def concat_regex(r1, r2):
+        # Упрощаем конкатенацию с учётом ε
         if r1 == "ε":
             return r2
         if r2 == "ε":
@@ -139,32 +175,51 @@ class StateMachine:
 
     @staticmethod
     def or_regex(r1, r2):
+        # Упрощаем альтернативу
         if not r1 or r1 == "ε":
             return r2
         if not r2 or r2 == "ε":
             return r1
-        if r1 == r2: 
+        if r1 == r2:  # Удаляем дубликаты
             return r1
         return f"({r1}|{r2})"
 
     @staticmethod
     def star_regex(r):
+        # Упрощаем звёздочку Клини
         if not r or r == "ε" or r.endswith("*"):
             return r
         return f"({r})*"
 
     def simplify_regex(self, regex):
-        simplified = regex.replace("(ε)", "") 
-        simplified = simplified.replace("ε|", "")  
+        """
+        Упрощает регулярное выражение.
+        """
+        # Удаляем избыточные скобки и ε
+        simplified = regex.replace("(ε)", "")
+        simplified = re.sub(r'\(([^|()]+)\)', r'\1', simplified)
+        simplified = re.sub(r'\|\|+', '|', simplified) 
+        simplified = re.sub(r'\*+', '*', simplified) 
+
+        # Удаление пустых альтернатив
+        simplified = simplified.replace("ε|", "")
         simplified = simplified.replace("|ε", "")
+        simplified = simplified.replace("ε", "") 
 
-        pattern = re.compile(r'\(([^)]+)\|\1\)')
-        while pattern.search(simplified):
-            simplified = pattern.sub(r'(\1)', simplified)
-
-        pattern = re.compile(r'\(([^)]+)\)\*\|\(\)')
+        # Упрощение выражений типа (a|b)*|a в (a|b)*
+        pattern = re.compile(r'\(([^)]+)\)\*\|(\1)')
         while pattern.search(simplified):
             simplified = pattern.sub(r'(\1)*', simplified)
+
+        # Упрощение выражений типа a|(a|b) в a|b
+        pattern = re.compile(r'([^|()]+)\|\(\1\|([^)]+)\)')
+        while pattern.search(simplified):
+            simplified = pattern.sub(r'\1|\2', simplified)
+
+        # Упрощение выражений типа (a|b)|(c|d) в a|b|c|d
+        pattern = re.compile(r'\(([^)]+)\)\|\(([^)]+)\)')
+        while pattern.search(simplified):
+            simplified = pattern.sub(r'(\1|\2)', simplified)
 
         return simplified
 
@@ -182,48 +237,51 @@ class StateMachine:
         if node is None:
             return current_state
 
-        if node.value[1] == "TERM":
+        if node.value[1] == "TERM" or node.value[1] == "START-LINE" or node.value[1] == "END-LINE":
             next_state = len(self.transitions)
             self.ensure_matrix_size(next_state)
             self.transitions[current_state][next_state] = node.value[0]
             return next_state
 
         elif node.value[1] == "BINARY":
-            left_state = self.convert_tree_to_state_machine(node.left_node, current_state)
-            right_state = self.convert_tree_to_state_machine(node.right_node, current_state)
-
             if node.value[0] == "|":
+                left_state = self.convert_tree_to_state_machine(node.left_node, current_state)
+                right_state = self.convert_tree_to_state_machine(node.right_node, current_state)
                 new_state = len(self.transitions)
                 self.ensure_matrix_size(new_state)
-                self.transitions[current_state][left_state] = "eps"
-                self.transitions[current_state][right_state] = "eps"
+                self.transitions[current_state][left_state] = "ε"
+                self.transitions[current_state][right_state] = "ε"
                 return new_state
             elif node.value[0] == ".":
+                left_state = self.convert_tree_to_state_machine(node.left_node, current_state)
                 return self.convert_tree_to_state_machine(node.right_node, left_state)
 
-        elif node.value[1] == "UNARY" and node.value[0] == "*":
-            next_state = len(self.transitions)
-            self.ensure_matrix_size(next_state)
-            self.transitions[current_state][next_state] = "eps"
-            self.transitions[next_state][next_state] = node.left_node.value[0]
-            self.transitions[next_state][current_state] = "eps"
-            return next_state
+        elif node.value[1] == "UNARY":
+            if node.left_node is None:
+                raise ValueError(f"Unary operator '{node.value[0]}' without an argument")
+
+            # Обработка унарного оператора
+            unary_state = self.convert_tree_to_state_machine(node.left_node, current_state)
+            if node.value[0] == "*":
+                self.transitions[unary_state][current_state] = "ε"
+                self.transitions[current_state][unary_state] = "ε"
+            elif node.value[0] in ["+", "?"]:
+                self.transitions[current_state][unary_state] = "ε"
+            return current_state
+
 
         return current_state
+
+    
     def check_word(self, word):
-
-        current_states = set(self.start_states)
-
+        current_states = set(self.initial_states)
         for char in word:
             next_states = set()
             for state in current_states:
-                for next_state, transition in enumerate(self.transition_matrix[state]):
+                for next_state, transition in enumerate(self.transitions[state]):
                     if transition == char:
                         next_states.add(next_state)
-
             current_states = next_states
-
             if not current_states:
                 return False
-
         return any(state in self.end_states for state in current_states)

@@ -1,1 +1,28 @@
-a*
+1 - qr
+2 - py
+3 - 
+4 - 
+5 - 
+
+
+Results for ((b(?<=^d))*b|a)*|ca(?<=^bd): 
+Words true: 100/100
+OK
+
+Test output regex ((|b(b)*)|(a|b(b)*a)((a|b(b)*a))*(|b(b)*))
+100 words checked, 
+OK
+
+
+Lexemes with lookahead: [('a', 'TERM'), ('b', 'TERM'), ('(', 'BRACKET'), ('(', 'BRACKET'), ('?', 'UNARY'), ('=', 'TERM'), ('d', 'TERM'), ('e', 'TERM'), ('f', 'TERM'), ('·', 'CONCAT'), ('.', 'DOT'), ('*', 'UNARY'), ('∩', 'INTERSECT'), (')', 'BRACKET')]
+Lexemes with lookbehind: [('∩', 'INTERSECT'), ('.', 'DOT'), ('*', 'UNARY'), ('·', 'CONCAT'), ('?', 'UNARY'), ('<', 'TERM'), ('=', 'TERM'), ('a', 'TERM'), ('b', 'TERM'), ('c', 'TERM'), (')', 'BRACKET'), (')', 'BRACKET'), ('d', 'TERM'), ('e', 'TERM'), ('f', 'TERM')]
+Postfix: [('a', 'TERM'), ('b', 'TERM'), ('|', 'BINARY'), ('a', 'TERM'), ('b', 'TERM'), ('b', 'TERM'), ('*', 'UNARY')]
+
+stateeeee <ts.StateMachine object at 0x1081b4310>
+Regex: ykvq
+Test String: q
+Python Result: False, Our Result: False
+(eps)((((|ε|(eps)(eps)))*)(eps))
+
+код долджен соответствовать условиям задачи  фааз-модуль и сравнительное итоговое 
+тестирование на случайных регулярках. Нужно добавить. код соответствует всем увсловиям задачи?

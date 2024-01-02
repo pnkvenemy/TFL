@@ -5,6 +5,7 @@ class ExprNode:
         self.right_node = right_node
 
     def preorder_traversal(self):
+        """ Предварительный обход дерева """
         nodes = [self]
         while nodes:
             node = nodes.pop()
@@ -15,6 +16,7 @@ class ExprNode:
                 nodes.append(node.left_node)
 
     def inorder_traversal(self):
+        """ Последовательный обход дерева """
         node = self
         stack = []
         while stack or node:
@@ -26,6 +28,7 @@ class ExprNode:
             node = node.right_node
 
     def __str__(self):
+        """ Печать дерева для отладки """
         def recurse(node, level):
             output = ""
             if node:

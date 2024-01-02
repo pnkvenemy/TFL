@@ -1,1 +1,1 @@
-(eps)((((cε|(eps)(eps)))*)(eps))
+(eps)((((|ε|(eps)(eps)))*)(eps))
